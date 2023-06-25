@@ -1,58 +1,49 @@
 import './css/styles.css';
-import debounce from 'lodash.debounce';
-import Notiflix, { Notify } from 'notiflix';
-import { fetchCountries } from './fetchCountries';
+import { fetchBreeds, fetchCatByBreed } from './js/cat-api.js';
+import Notiflix from 'notiflix';
 
-const inputEl = document.getElementById('search-box');
-const listEl = document.querySelector('.country-list');
-const info = document.querySelector('.country-info');
+const loader = document.querySelector('.loader');
+const selectCat = document.querySelector('.breed-select');
+const catInfoEl = document.querySelector('.cat-info');
 
-const handleSearchCountry = event => {
-  const searchCountry = event.target.value.trim();
-  listEl.innerHTML = '';
-
-  if (searchCountry !== '') {
-    fetchCountries(searchCountry)
-      .then(data => {
-        if (2 <= data.length && data.length <= 10) {
-          const markup = data
-            .map(
-              country =>
-                `<li class= "list-item"><img clas = "flag" src=${country.flags.png} width = 80px>  ${country.name.common} </li>`
-            )
-            .join('');
-
-          listEl.insertAdjacentHTML('beforeend', markup);
-        }
-        if (data.length > 10) {
-          Notiflix.Notify.info(
-            'Too many matches found. Please enter a more specific name.'
-          );
-        }
-        if (data.length === 1) {
-          const countryInfo = data
-            .map(
-              country =>
-                `<h2><img clas = "flag" src=${
-                  country.flags.png
-                } width = 80px>  ${country.name.common} </h2>
-                <p>Capital: ${country.capital}</p>
-                <p>Population: ${country.population}</p>
-                <p>Languages: ${Object.values(country.languages)}</p>`
-            )
-            .join('');
-
-          listEl.insertAdjacentHTML('beforeend', countryInfo);
-        }
+selectCat.onchange = showInfoCat;
+  
+function makeupSelect() { 
+    loader.classList.remove('hide');
+    fetchBreeds()
+        .then(data => {
+          loader.classList.add('hide');
+          selectCat.innerHTML = data.map(({ name, id }) => `<option value="${id}">${name}</option>`).join('');
+          selectCat.classList.remove('hide');
       })
-      .catch(error => {
-        Notiflix.Notify.failure('Oops, there is no country with that name');
+        .catch(() => {
+            loader.classList.add('hide');
+            Notiflix.Notify.failure('Oops! Something went wrong! Try reloading the page!');
       });
-  }
-};
-const DEBOUNCE_DELAY = 300;
+    
+}
+makeupSelect() 
 
-inputEl.addEventListener(
-  'input',
-  debounce(handleSearchCountry, DEBOUNCE_DELAY)
-);
+function showInfoCat() {
+  catInfoEl.innerHTML = '';
+    loader.classList.remove('hide');
+    fetchCatByBreed(selectCat.value)
+      .then(data => {
+       loader.classList.add('hide');
+        makeUpCatInfo(data[0]);
+      })
+        .catch(() => {
+          loader.classList.add('hide');
+        Notiflix.Notify.failure('Oops! Something went wrong! Try reloading the page!');
+      });
+}
+
+function makeUpCatInfo(breed) {
+    loader.classList.add('hide');
+    let title = `<h2>${breed.breeds[0].name}</h2>`
+    let image = `<div><img src="${breed.url}"></div>`;
+    let description = `<h3>Description</h3><p>${breed.breeds[0].description}</p>`;
+    let temperament = `<h3>Temperament</h3><p>${breed.breeds[0].temperament}</p>`;
+    catInfoEl.innerHTML = image + '<div class="content">' + title + description + temperament + '</div>';
+    console.log(title);
+}
